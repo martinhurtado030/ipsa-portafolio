@@ -175,11 +175,15 @@ def _compute_twr_b100(df: pd.DataFrame, buy_flows_by_date: dict) -> pd.Series:
 
 
 def ts_str(ts) -> str:
-    """Format a pandas Timestamp for display."""
+    """Format a pandas Timestamp for display in Chile time."""
     if ts is None:
         return "N/A"
     try:
-        return ts.strftime("%Y-%m-%d %H:%M")
+        import pytz as _pytz
+        tz = _pytz.timezone(CHILE_TZ)
+        if ts.tzinfo is None:
+            ts = _pytz.utc.localize(ts)
+        return ts.astimezone(tz).strftime("%Y-%m-%d %H:%M CLT")
     except Exception:
         return str(ts)
 
