@@ -30,6 +30,8 @@ IPSA_CONSTITUENTS = {
     "SK.SN":         "Sigdo Koppers S.A.",
     "SMU.SN":        "SMU S.A.",
     "SONDA.SN":      "Sonda S.A.",
+    "CENCOMALLS.SN": "CencoMalls S.A.",
+    "ANDINA-B.SN":   "Embotelladora Andina S.A. (Serie B)",
     "SQM-B.SN":      "Sociedad Quimica y Minera de Chile S.A. (Serie B)",
     "VAPORES.SN":    "Compania Sud Americana de Vapores S.A.",
 }
@@ -64,8 +66,10 @@ IPSA_SECTORS = {
     "SALFACORP": "Industrials",
     "SECURITY":  "Financials",
     "SK":        "Industrials",
-    "SMU":       "Consumer Staples",
-    "SONDA":     "Technology",
+    "SMU":        "Consumer Staples",
+    "SONDA":      "Technology",
+    "CENCOMALLS": "Real Estate",
+    "ANDINA-B":   "Consumer Staples",
     "SQM-B":     "Materials",
     "VAPORES":   "Industrials",
 }
