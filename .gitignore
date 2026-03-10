@@ -1,0 +1,17 @@
+# Secrets — never commit
+.streamlit/secrets.toml
+
+# Local database (replaced by Supabase)
+portfolio.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
