@@ -1006,12 +1006,29 @@ with tab_briefing:
     if not holdings:
         st.info("No holdings to brief on. Add positions in 'Manage Holdings'.")
     else:
+        # Group multiple purchases of the same ticker into one row
+        grouped: dict = {}
         for h in holdings:
-            ticker    = h["ticker"]
-            short_tkr = ticker.replace(".SN", "")
-            pd_data   = prices.get(ticker, {})
-            price     = pd_data.get("price")
-            ts        = pd_data.get("timestamp")
+            t = h["ticker"]
+            if t not in grouped:
+                grouped[t] = {
+                    "ticker":       t,
+                    "company_name": h["company_name"],
+                    "quantity":     h["quantity"],
+                    "cost_basis":   h["quantity"] * h["buy_price"],
+                    "earliest_date": h["buy_date"],
+                }
+            else:
+                grouped[t]["quantity"]   += h["quantity"]
+                grouped[t]["cost_basis"] += h["quantity"] * h["buy_price"]
+                if h["buy_date"] < grouped[t]["earliest_date"]:
+                    grouped[t]["earliest_date"] = h["buy_date"]
+
+        for ticker, g in grouped.items():
+            short_tkr  = ticker.replace(".SN", "")
+            pd_data    = prices.get(ticker, {})
+            price      = pd_data.get("price")
+            ts         = pd_data.get("timestamp")
 
             if not price:
                 st.warning(
@@ -1020,18 +1037,22 @@ with tab_briefing:
                 )
                 continue
 
-            pnl      = calc_holding_pnl(h, price)
+            qty        = g["quantity"]
+            cost_basis = g["cost_basis"]
+            avg_cost   = cost_basis / qty if qty else 0
+            mkt_value  = qty * price
+            gain_clp   = mkt_value - cost_basis
+            gain_pct   = (gain_clp / cost_basis * 100) if cost_basis else 0
+
             hist     = df_.get_historical_data(ticker, "1y")
             sma_data = calc_sma_signals(hist)
             sr_data  = calc_support_resistance(hist)
-
-            # Compute day change
             chg_pct  = pd_data.get("change_pct", 0) or 0
 
             with st.expander(
-                f"{short_tkr} — {h['company_name']} | "
+                f"{short_tkr} — {g['company_name']} | "
                 f"Price: {price:,.1f} CLP ({chg_pct:+.2f}%) | "
-                f"P&L: {fmt_pct(pnl['gain_loss_pct'])}",
+                f"P&L: {fmt_pct(gain_pct)}",
                 expanded=False,
             ):
                 b1, b2 = st.columns(2)
@@ -1040,17 +1061,17 @@ with tab_briefing:
                     st.markdown(f"**Current Price:** {price:,.2f} CLP")
                     st.caption(f"Last verified: {ts_str(ts)}")
                     st.markdown(f"**Day Change:** {chg_pct:+.2f}%")
+                    st.markdown(f"**Avg Cost:** {avg_cost:,.2f} CLP | **Qty:** {qty:,.0f}")
                     st.markdown(
-                        f"**Holding P&L:** {fmt_clp(pnl['gain_loss_clp'])} "
-                        f"({fmt_pct(pnl['gain_loss_pct'])})"
+                        f"**Holding P&L:** {fmt_clp(gain_clp)} ({fmt_pct(gain_pct)})"
                     )
 
-                    # IPSA alpha
-                    ipsa_ret = df_.get_ipsa_return_since(h["buy_date"])
-                    alpha    = calc_alpha(pnl["gain_loss_pct"], ipsa_ret)
+                    # IPSA alpha since earliest buy
+                    ipsa_ret = df_.get_ipsa_return_since(g["earliest_date"])
+                    alpha    = calc_alpha(gain_pct, ipsa_ret)
                     if alpha is not None:
                         st.markdown(
-                            f"**Alpha vs IPSA (since {h['buy_date']}):** {fmt_pct(alpha)}"
+                            f"**Alpha vs IPSA (since {g['earliest_date']}):** {fmt_pct(alpha)}"
                         )
 
                 with b2:
