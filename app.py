@@ -274,25 +274,100 @@ tab_overview, tab_manage, tab_sieve, tab_briefing, tab_charts, tab_performance, 
 
 with tab_overview:
 
-    # ── Top KPIs ──────────────────────────────────────────────────────────────
-    k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Total NAV (CLP)",   fmt_clp(summary["total_nav"]))
-    k2.metric("Equity Value",      fmt_clp(summary["total_equity_value"]))
-    k3.metric("Cash Reserve",      fmt_clp(summary["cash"]))
-    k4.metric(
-        "Total P&L",
-        fmt_clp(summary["total_pnl"]),
-        delta=fmt_pct(summary["total_pnl_pct"]),
-        delta_color="normal",
-    )
-    k5.metric(
-        "Investment Level",
-        f"{summary['equity_pct']:.1f}% Equities",
-        delta=f"{summary['cash_pct']:.1f}% Cash",
-        delta_color="off",
-    )
+    # ── Premium UI CSS ─────────────────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    /* Gray page background */
+    .stApp > .main { background-color: #F8F9FA; }
+    section[data-testid="stSidebar"] { background-color: #ffffff; }
 
-    st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
+    /* Card container */
+    .ov-card {
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+        padding: 1.25rem 1.5rem 1rem;
+        margin-bottom: 1rem;
+        transition: box-shadow 0.22s ease, transform 0.22s ease;
+    }
+    .ov-card:hover {
+        box-shadow: 0 4px 18px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+    }
+    .ov-card-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #94a3b8;
+        margin: 0 0 0.85rem;
+    }
+
+    /* KPI row inside a card */
+    .kpi-row { display: flex; gap: 0; }
+    .kpi-cell {
+        flex: 1;
+        padding: 0.1rem 1rem 0.1rem 0;
+        border-right: 1px solid #f1f5f9;
+    }
+    .kpi-cell:last-child { border-right: none; }
+    .kpi-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: 0.18rem;
+    }
+    .kpi-value {
+        font-size: 1.28rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.2;
+    }
+    .kpi-delta-pos { font-size: 0.82rem; font-weight: 600; color: #10b981; }
+    .kpi-delta-neg { font-size: 0.82rem; font-weight: 600; color: #ef4444; }
+    .kpi-delta-neu { font-size: 0.82rem; font-weight: 600; color: #64748b; }
+
+    /* Dataframe row hover */
+    [data-testid="stDataFrame"] table tbody tr:hover td {
+        background-color: #f0f7ff !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── Top KPIs card ─────────────────────────────────────────────────────────
+    _pnl_cls   = "kpi-delta-pos" if summary["total_pnl"] >= 0 else "kpi-delta-neg"
+    _pnl_sign  = "+" if summary["total_pnl"] >= 0 else ""
+    st.markdown(f"""
+    <div class="ov-card">
+      <div class="ov-card-title">Portfolio Summary</div>
+      <div class="kpi-row">
+        <div class="kpi-cell">
+          <div class="kpi-label">Total NAV</div>
+          <div class="kpi-value">{fmt_clp(summary["total_nav"])}</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Equity Value</div>
+          <div class="kpi-value">{fmt_clp(summary["total_equity_value"])}</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Cash Reserve</div>
+          <div class="kpi-value">{fmt_clp(summary["cash"])}</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Total P&amp;L</div>
+          <div class="kpi-value">{fmt_clp(summary["total_pnl"])}</div>
+          <div class="{_pnl_cls}">{_pnl_sign}{fmt_pct(summary["total_pnl_pct"])}</div>
+        </div>
+        <div class="kpi-cell">
+          <div class="kpi-label">Investment Level</div>
+          <div class="kpi-value">{summary["equity_pct"]:.1f}% Equities</div>
+          <div class="kpi-delta-neu">{summary["cash_pct"]:.1f}% Cash</div>
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ── Build shared allocation data (group multiple lots of same ticker) ──────
     alloc_agg: dict = {}
@@ -315,23 +390,18 @@ with tab_overview:
     # ── Layout: [dynamic donut | holdings table] ───────────────────────────────
     col_donut, col_table = st.columns([1, 2], gap="large")
 
-    # ── Dynamic Donut Chart ────────────────────────────────────────────────────
+    # ── Dynamic Donut Chart card ───────────────────────────────────────────────
     with col_donut:
-        _lbl_col, _btn_col = st.columns([1, 1])
-        with _lbl_col:
-            st.markdown(
-                "<p style='font-size:0.92rem;font-weight:600;color:#4a5568;"
-                "margin:0;padding-top:9px;letter-spacing:0.03em'>Distribución</p>",
-                unsafe_allow_html=True,
-            )
-        with _btn_col:
-            chart_mode = st.segmented_control(
-                "Vista",
-                options=["Clases", "Sectores"],
-                default="Clases",
-                key="overview_chart_mode",
-                label_visibility="collapsed",
-            )
+        st.markdown("<div class='ov-card' style='min-height:420px'>", unsafe_allow_html=True)
+        st.markdown("<div class='ov-card-title'>Distribución</div>", unsafe_allow_html=True)
+
+        chart_mode = st.segmented_control(
+            "Vista",
+            options=["Clases", "Sectores"],
+            default="Clases",
+            key="overview_chart_mode",
+            label_visibility="collapsed",
+        )
 
         _PALETTE = [
             "#3a86ff", "#06d6a0", "#ffbe0b", "#fb5607",
@@ -342,6 +412,7 @@ with tab_overview:
 
         if alloc_rows:
             df_alloc = pd.DataFrame(alloc_rows)
+            total_val = df_alloc["value"].sum()
 
             if chart_mode == "Clases":
                 df_plot   = df_alloc.groupby("label",  as_index=False)["value"].sum()
@@ -355,32 +426,35 @@ with tab_overview:
                 values="value",
                 names=names_col,
                 color_discrete_sequence=_PALETTE,
-                hole=0.44,
+                hole=0.46,
                 template="plotly_white",
             )
             fig_donut.update_traces(
                 textposition="inside",
                 textinfo="percent+label",
                 textfont_size=11,
-                marker=dict(line=dict(color="#ffffff", width=2)),
-                hovertemplate="<b>%{label}</b><br>%{percent:.1%}<extra></extra>",
+                marker=dict(line=dict(color="#ffffff", width=2.5)),
+                hovertemplate="<b>%{label}</b><br>$%{value:,.0f} CLP<br>%{percent:.1%}<extra></extra>",
+                pull=[0.03] * len(df_plot),
             )
             fig_donut.update_layout(
-                height=360,
+                height=340,
                 margin=dict(t=10, b=10, l=10, r=10),
                 showlegend=False,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                transition={"duration": 500, "easing": "cubic-in-out"},
             )
             st.plotly_chart(fig_donut, use_container_width=True)
         else:
             st.info("Add holdings to see allocation.")
 
-    # ── Holdings Summary (grouped by ticker) ───────────────────────────────────
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Holdings Summary card (grouped by ticker) ──────────────────────────────
     with col_table:
-        st.markdown(
-            "<p style='font-size:1rem;font-weight:600;color:#4a5568;"
-            "letter-spacing:0.02em;margin-bottom:0.5rem'>Holdings Summary</p>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='ov-card-title'>Holdings Summary</div>", unsafe_allow_html=True)
 
         if holdings:
             # Consolidate multiple lots of the same ticker into one row
@@ -412,56 +486,64 @@ with tab_overview:
                     rows.append({
                         "Ticker":      t.replace(".SN", ""),
                         "Qty":         int(qty),
-                        "Buy (CLP)":   avg_buy,
-                        "Value (CLP)": cur_val,
+                        "Precio Compra": avg_buy,
+                        "Valor (CLP)": cur_val,
                         "P&L CLP":     pnl_clp,
-                        "P&L %":       pnl_pct,
+                        "P&L %":       pnl_pct / 100,  # stored as ratio for column_config
                     })
                 else:
                     rows.append({
                         "Ticker":      t.replace(".SN", ""),
                         "Qty":         int(qty),
-                        "Buy (CLP)":   avg_buy,
-                        "Value (CLP)": None,
+                        "Precio Compra": avg_buy,
+                        "Valor (CLP)": None,
                         "P&L CLP":     None,
                         "P&L %":       None,
                     })
 
             df_holdings = pd.DataFrame(rows)
 
-            def _cell_pnl(val):
-                if pd.isna(val):
-                    return ""
-                if val > 0:
-                    a = min(0.08 + (val / 25) * 0.22, 0.30)
-                    return f"background-color: rgba(16,185,129,{a:.2f}); color: #065f46"
-                if val < 0:
-                    a = min(0.08 + (abs(val) / 25) * 0.22, 0.30)
-                    return f"background-color: rgba(239,68,68,{a:.2f}); color: #7f1d1d"
-                return ""
-
-            styled = (
-                df_holdings.style
-                .map(_cell_pnl, subset=["P&L %"])
-                .format({
-                    "Qty":         "{:,}",
-                    "Buy (CLP)":   lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
-                    "Value (CLP)": lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
-                    "P&L CLP":     lambda x: (f"+${x:,.0f}" if x >= 0 else f"−${abs(x):,.0f}") if pd.notna(x) else "—",
-                    "P&L %":       lambda x: (f"+{x:.1f}%" if x >= 0 else f"{x:.1f}%") if pd.notna(x) else "—",
-                })
-                .set_properties(**{"text-align": "right"}, subset=["Qty", "Buy (CLP)", "Value (CLP)", "P&L CLP", "P&L %"])
-                .set_properties(**{"text-align": "left", "font-weight": "600"}, subset=["Ticker"])
-                .hide(axis="index")
-            )
+            # Numeric P&L % column for progress bar — keep raw ratio
+            df_holdings["_pnl_bar"] = df_holdings["P&L %"].fillna(0.0)
 
             st.dataframe(
-                styled,
+                df_holdings.drop(columns=["_pnl_bar"]),
                 use_container_width=True,
-                height=min(400, 48 + 38 * len(rows)),
+                height=min(420, 48 + 40 * len(rows)),
+                hide_index=True,
+                column_config={
+                    "Ticker": st.column_config.TextColumn(
+                        "Ticker",
+                        width="small",
+                    ),
+                    "Qty": st.column_config.NumberColumn(
+                        "Cantidad",
+                        format="%d",
+                        width="small",
+                    ),
+                    "Precio Compra": st.column_config.NumberColumn(
+                        "Precio Compra",
+                        format="$%,.0f",
+                    ),
+                    "Valor (CLP)": st.column_config.NumberColumn(
+                        "Valor (CLP)",
+                        format="$%,.0f",
+                    ),
+                    "P&L CLP": st.column_config.NumberColumn(
+                        "P&L CLP",
+                        format="$%,.0f",
+                    ),
+                    "P&L %": st.column_config.NumberColumn(
+                        "P&L %",
+                        format="%.2f%%",
+                        help="Ganancia/pérdida porcentual desde el precio de compra promedio",
+                    ),
+                },
             )
         else:
             st.info("No holdings yet. Use the 'Manage Holdings' tab to add positions.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
