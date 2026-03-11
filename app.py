@@ -249,6 +249,81 @@ summary  = calc_portfolio_summary(holdings, prices, cash)
 
 # ── Main header ───────────────────────────────────────────────────────────────
 
+# ── Global premium CSS ────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+/* ── Page background ── */
+.stApp > .main { background-color: #F8F9FA; }
+section[data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e2e8f0; }
+
+/* ── Card container ── */
+.ov-card {
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+    padding: 1.25rem 1.5rem 1rem;
+    margin-bottom: 1rem;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+}
+.ov-card:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+.ov-card-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #94a3b8;
+    margin: 0 0 0.85rem;
+}
+
+/* ── KPI row ── */
+.kpi-row { display: flex; gap: 0; }
+.kpi-cell {
+    flex: 1;
+    padding: 0.1rem 1rem 0.1rem 0;
+    border-right: 1px solid #f1f5f9;
+}
+.kpi-cell:last-child { border-right: none; }
+.kpi-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 0.18rem;
+}
+.kpi-value {
+    font-size: 1.28rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+}
+.kpi-delta-pos { font-size: 0.82rem; font-weight: 600; color: #10b981; }
+.kpi-delta-neg { font-size: 0.82rem; font-weight: 600; color: #ef4444; }
+.kpi-delta-neu { font-size: 0.82rem; font-weight: 600; color: #64748b; }
+
+/* ── Sidebar buttons ── */
+section[data-testid="stSidebar"] .stButton > button {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: background 0.18s ease !important;
+}
+section[data-testid="stSidebar"] .stButton > button:hover {
+    background-color: #334155 !important;
+}
+
+/* ── Table row hover ── */
+[data-testid="stDataFrame"] table tbody tr:hover td {
+    background-color: #f0f7ff !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("IPSA Portfolio Manager")
 st.caption(
     "Santiago Stock Exchange (SSE) | Real-time data: Yahoo Finance | "
@@ -274,67 +349,7 @@ tab_overview, tab_manage, tab_sieve, tab_briefing, tab_charts, tab_performance, 
 
 with tab_overview:
 
-    # ── Premium UI CSS ─────────────────────────────────────────────────────────
-    st.markdown("""
-    <style>
-    /* Gray page background */
-    .stApp > .main { background-color: #F8F9FA; }
-    section[data-testid="stSidebar"] { background-color: #ffffff; }
-
-    /* Card container */
-    .ov-card {
-        background: #ffffff;
-        border-radius: 14px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
-        padding: 1.25rem 1.5rem 1rem;
-        margin-bottom: 1rem;
-        transition: box-shadow 0.22s ease, transform 0.22s ease;
-    }
-    .ov-card:hover {
-        box-shadow: 0 4px 18px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.08);
-        transform: translateY(-2px);
-    }
-    .ov-card-title {
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #94a3b8;
-        margin: 0 0 0.85rem;
-    }
-
-    /* KPI row inside a card */
-    .kpi-row { display: flex; gap: 0; }
-    .kpi-cell {
-        flex: 1;
-        padding: 0.1rem 1rem 0.1rem 0;
-        border-right: 1px solid #f1f5f9;
-    }
-    .kpi-cell:last-child { border-right: none; }
-    .kpi-label {
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: #94a3b8;
-        margin-bottom: 0.18rem;
-    }
-    .kpi-value {
-        font-size: 1.28rem;
-        font-weight: 700;
-        color: #1e293b;
-        line-height: 1.2;
-    }
-    .kpi-delta-pos { font-size: 0.82rem; font-weight: 600; color: #10b981; }
-    .kpi-delta-neg { font-size: 0.82rem; font-weight: 600; color: #ef4444; }
-    .kpi-delta-neu { font-size: 0.82rem; font-weight: 600; color: #64748b; }
-
-    /* Dataframe row hover */
-    [data-testid="stDataFrame"] table tbody tr:hover td {
-        background-color: #f0f7ff !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # (Global CSS injected above)
 
     # ── Top KPIs card ─────────────────────────────────────────────────────────
     _pnl_cls   = "kpi-delta-pos" if summary["total_pnl"] >= 0 else "kpi-delta-neg"
@@ -388,7 +403,7 @@ with tab_overview:
         alloc_rows.append({"label": "Cash", "sector": "Cash", "value": cash})
 
     # ── Layout: [dynamic donut | holdings table] ───────────────────────────────
-    col_donut, col_table = st.columns([1, 2], gap="large")
+    col_donut, col_table = st.columns([1, 1.2], gap="large")
 
     # ── Dynamic Donut Chart card ───────────────────────────────────────────────
     with col_donut:
@@ -650,268 +665,245 @@ with tab_manage:
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tab_sieve:
-    st.subheader("The Universal Sieve — Full Position Analysis")
-    st.caption(
-        "P&L | Alpha vs IPSA | 50/200-SMA Signals | "
-        "Valuation (P/E or P/B) | Support & Resistance | CMF Links"
-    )
+    st.subheader("Universal Sieve — Análisis de Posiciones")
+    st.caption("P&L · Alpha vs IPSA · SMA 50/200 · RSI · Zonas de Memoria · Fundamentales · CMF")
 
     if not holdings:
-        st.info("Add holdings in 'Manage Holdings' to run the sieve.")
+        st.info("Agrega posiciones en 'Manage Holdings' para analizar.")
     else:
+        # Group multiple lots of same ticker → one expander per ticker
+        sieve_grouped: dict = {}
         for h in holdings:
-            ticker    = h["ticker"]
-            short_tkr = ticker.replace(".SN", "")
+            t = h["ticker"]
+            if t not in sieve_grouped:
+                sieve_grouped[t] = {
+                    "ticker":       t,
+                    "company_name": h["company_name"],
+                    "quantity":     h["quantity"],
+                    "total_cost":   h["quantity"] * h["buy_price"],
+                    "earliest_date": h["buy_date"],
+                    # keep a representative holding for alpha calc
+                    "_h_repr": h,
+                }
+            else:
+                sieve_grouped[t]["quantity"]   += h["quantity"]
+                sieve_grouped[t]["total_cost"] += h["quantity"] * h["buy_price"]
+                if h["buy_date"] < sieve_grouped[t]["earliest_date"]:
+                    sieve_grouped[t]["earliest_date"] = h["buy_date"]
+                    sieve_grouped[t]["_h_repr"] = h
 
-            st.markdown("---")
-            st.markdown(f"## {short_tkr} — {h['company_name']}")
-            st.caption(
-                f"Held since {h['buy_date']} | "
-                f"Buy price: {h['buy_price']:,.2f} CLP | "
-                f"Qty: {int(h['quantity']):,}"
-            )
+        for ticker, sg in sieve_grouped.items():
+            short_tkr = ticker.replace(".SN", "")
+            qty        = sg["quantity"]
+            total_cost = sg["total_cost"]
+            avg_buy    = total_cost / qty if qty else 0
+            earliest   = sg["earliest_date"]
 
             pd_data       = prices.get(ticker, {})
             current_price = pd_data.get("price")
             ts            = pd_data.get("timestamp")
 
-            if not current_price:
-                st.error(
-                    f"Price unavailable (last verified: {ts_str(ts)}). "
-                    f"Error: {pd_data.get('error', 'Unknown')}"
+            # Pre-fetch data for expander title
+            hist_2y  = df_.get_historical_data(ticker, "2y")
+            sma_data = calc_sma_signals(hist_2y)
+            signal_label = SIGNAL_LABELS.get(sma_data.get("signal", ""), "—") if sma_data.get("signal") else "—"
+
+            if current_price:
+                cur_val  = qty * current_price
+                pnl_clp  = cur_val - total_cost
+                pnl_pct  = (pnl_clp / total_cost * 100) if total_cost else 0
+                pnl_sign = "+" if pnl_pct >= 0 else ""
+                expander_title = (
+                    f"{short_tkr}  |  ${current_price:,.0f} CLP  |  "
+                    f"P&L: {pnl_sign}{pnl_pct:.1f}%  |  Señal: {signal_label}"
                 )
-                continue
+            else:
+                expander_title = f"{short_tkr}  |  Precio no disponible"
 
-            # --- Row 1: Performance | Technical | Fundamentals
-            col_perf, col_tech, col_fund = st.columns(3)
-
-            # Performance
-            with col_perf:
-                st.markdown("### Performance")
-                pnl = calc_holding_pnl(h, current_price)
-
-                st.metric(
-                    "Current Price (CLP)",
-                    f"{current_price:,.2f}",
-                    delta=fmt_pct(pnl["gain_loss_pct"]),
-                    delta_color="normal",
-                    help=f"Last verified: {ts_str(ts)}",
-                )
-                st.metric("P&L (CLP)", fmt_clp(pnl["gain_loss_clp"]))
-                st.metric("Current Value", fmt_clp(pnl["current_value"]))
-                st.metric("Cost Basis", fmt_clp(pnl["cost_basis"]))
-
-                # Alpha vs IPSA
-                stock_ret   = pnl["gain_loss_pct"]
-                ipsa_ret    = df_.get_ipsa_return_since(h["buy_date"])
-                alpha       = calc_alpha(stock_ret, ipsa_ret)
-
-                if alpha is not None:
-                    st.metric(
-                        "Alpha vs IPSA",
-                        fmt_pct(alpha),
-                        delta=f"Stock {fmt_pct(stock_ret)} | IPSA {fmt_pct(ipsa_ret)}",
-                        delta_color="off",
-                        help="Relative performance since buy date",
+            with st.expander(expander_title, expanded=False):
+                if not current_price:
+                    st.error(
+                        f"Precio no disponible (última verificación: {ts_str(ts)}). "
+                        f"Error: {pd_data.get('error', 'Unknown')}"
                     )
-                else:
-                    st.metric("Alpha vs IPSA", "N/A", help="IPSA data unavailable")
+                    continue
 
-            # Technical
-            with col_tech:
-                st.markdown("### Technical Signals")
-                hist     = df_.get_historical_data(ticker, "2y")
-                sma_data = calc_sma_signals(hist)
-                sr_data  = calc_support_resistance(hist)
+                tab_analisis, tab_tecnico, tab_info = st.tabs(["📊 Análisis", "📉 Técnico", "📌 Info"])
 
-                if sma_data["sma50"]:
-                    st.metric("50-Day SMA", f"{sma_data['sma50']:,.2f}")
-                else:
-                    st.metric("50-Day SMA", "Insufficient data (<50 bars)")
+                # ── TAB 1: Análisis ────────────────────────────────────────────
+                with tab_analisis:
+                    a1, a2, a3, a4, a5 = st.columns(5)
+                    a1.metric("Precio Actual", f"{current_price:,.0f} CLP",
+                              help=f"Última verificación: {ts_str(ts)}")
+                    a2.metric("P&L CLP", fmt_clp(pnl_clp),
+                              delta=f"{pnl_sign}{pnl_pct:.1f}%",
+                              delta_color="normal")
+                    a3.metric("Valor de Mercado", fmt_clp(cur_val))
+                    a4.metric("Costo Total", fmt_clp(total_cost))
+                    a5.metric("Precio Prom. Compra", f"{avg_buy:,.0f} CLP")
 
-                if sma_data["sma200"]:
-                    st.metric("200-Day SMA", f"{sma_data['sma200']:,.2f}")
-                    st.metric("Stretch from 200-SMA", fmt_pct(sma_data["stretch_pct"]))
-                else:
-                    st.metric("200-Day SMA", "Insufficient data (<200 bars)")
-
-                if sma_data["signal"]:
-                    label = SIGNAL_LABELS.get(sma_data["signal"], sma_data["signal"])
-                    signal_color = {
-                        "GOLDEN_CROSS":       "success",
-                        "BULLISH":            "success",
-                        "OVERSOLD_EXTREME":   "success",
-                        "DEATH_CROSS":        "error",
-                        "BEARISH":            "error",
-                        "OVERBOUGHT_EXTREME": "warning",
-                    }.get(sma_data["signal"], "info")
-                    getattr(st, signal_color)(f"Signal: {label}")
-
-                st.divider()
-                if sr_data["support"]:
-                    st.metric("Support (60-day)", f"{sr_data['support']:,.2f} CLP")
-                if sr_data["resistance"]:
-                    st.metric("Resistance (60-day)", f"{sr_data['resistance']:,.2f} CLP")
-                if sr_data["period_low"]:
-                    st.caption(
-                        f"60-day range: {sr_data['period_low']:,.1f} — "
-                        f"{sr_data['period_high']:,.1f} CLP"
-                    )
-
-            # Fundamentals
-            with col_fund:
-                st.markdown("### Fundamentals & Catalysts")
-                info      = df_.get_stock_info(ticker)
-                dividends = df_.get_dividends(ticker)
-
-                pe_ratio = info.get("trailingPE")
-                pb       = info.get("priceToBook")
-                dy       = info.get("dividendYield")
-                mcap     = info.get("marketCap")
-
-                if pe_ratio:
-                    st.metric("P/E (trailing)", f"{pe_ratio:.1f}x")
-                if pb:
-                    st.metric("P/B Ratio", f"{pb:.2f}x")
-                if dy:
-                    # Yahoo Finance returns dividendYield already as a percentage for .SN tickers
-                    # (e.g. 0.56 means 0.56%, 3.2 means 3.2%) — no multiplication needed.
-                    st.metric("Dividend Yield", f"{dy:.2f}%")
-                if mcap:
-                    unit = "B" if mcap >= 1e9 else "M"
-                    val  = mcap / 1e9 if mcap >= 1e9 else mcap / 1e6
-                    st.metric("Market Cap", f"${val:.1f}{unit}")
-
-                st.divider()
-                # Dividends
-                if not dividends.empty:
-                    last_div     = float(dividends.iloc[-1])
-                    last_div_dt  = dividends.index[-1]
-                    st.success(
-                        f"Last dividend: {last_div:,.2f} CLP "
-                        f"({last_div_dt.strftime('%Y-%m-%d')})"
-                    )
-                else:
-                    st.caption("No dividend history available.")
-
-                # CMF filings link
-                cmf_url = (
-                    f"https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php"
-                    f"?s=emiso&q={short_tkr}"
-                )
-                st.markdown(f"[CMF Filings for {short_tkr}]({cmf_url})")
-
-            # --- Row 2: Zonas de Confluencia ──────────────────────────────────
-            st.markdown("#### Zonas de Confluencia & Señal de Entrada")
-
-            hist_6m      = df_.get_historical_data(ticker, "1y")
-            rsi_val      = calc_rsi(hist_6m)
-            memory_zones = calc_memory_zones(hist_6m)
-            vol_conf     = calc_volume_confirmation(hist_6m)
-            buy_alert    = calc_buy_zone_alert(current_price, sma_data, rsi_val, memory_zones)
-
-            zc1, zc2, zc3 = st.columns(3)
-
-            # — Zonas de Memoria (S/R con >= 2 toques)
-            with zc1:
-                st.markdown("**Zonas de Memoria (6M)**")
-                supports    = memory_zones.get("support_zones", [])
-                resistances = memory_zones.get("resistance_zones", [])
-
-                if supports:
-                    st.markdown("*Soportes:*")
-                    for z in supports[:3]:
-                        dist_pct = ((current_price - z["level"]) / z["level"]) * 100
-                        st.markdown(
-                            f"&nbsp;&nbsp;`{z['level']:,.1f}` — "
-                            f"{z['touches']} toques · {dist_pct:+.1f}% desde precio actual",
-                            unsafe_allow_html=True,
-                        )
-                else:
-                    st.caption("Sin soportes con ≥ 2 toques en 6M.")
-
-                if resistances:
-                    st.markdown("*Resistencias:*")
-                    for z in resistances[:3]:
-                        dist_pct = ((z["level"] - current_price) / current_price) * 100
-                        st.markdown(
-                            f"&nbsp;&nbsp;`{z['level']:,.1f}` — "
-                            f"{z['touches']} toques · {dist_pct:+.1f}% hasta resistencia",
-                            unsafe_allow_html=True,
-                        )
-                else:
-                    st.caption("Sin resistencias con ≥ 2 toques en 6M.")
-
-            # — RSI + Buy Zone Alert
-            with zc2:
-                st.markdown("**RSI (14) & Punto de Entrada**")
-
-                if rsi_val is not None:
-                    rsi_color = (
-                        "🟢" if rsi_val < 35
-                        else "🔴" if rsi_val > 70
-                        else "⚪"
-                    )
-                    rsi_label = (
-                        "Sobrevendido" if rsi_val < 35
-                        else "Sobrecomprado" if rsi_val > 70
-                        else "Neutral"
-                    )
-                    st.metric("RSI 14", f"{rsi_val:.1f}", delta=rsi_label, delta_color="off")
-                else:
-                    st.metric("RSI 14", "N/A")
-
-                alert = buy_alert["alert_level"]
-                conds = buy_alert["conditions"]
-                det   = buy_alert["details"]
-
-                ALERT_UI = {
-                    "STRONG":   ("🟢 BUY ZONE — FUERTE",   "success"),
-                    "MODERATE": ("🟡 BUY ZONE — MODERADA", "warning"),
-                    "WATCH":    ("⚪ En Vigilancia",        "info"),
-                }
-                if alert:
-                    label, fn = ALERT_UI[alert]
-                    getattr(st, fn)(label)
-                    for c in conds:
-                        if c == "support_zone" and det.get("nearest_support"):
-                            ns = det["nearest_support"]
-                            st.markdown(
-                                f"✓ Cerca de soporte `{ns['level']:,.1f}` · {ns['touches']} toques"
-                            )
-                        elif c == "sma200" and sma_data.get("sma200"):
-                            st.markdown(f"✓ Cerca de SMA 200 ({sma_data['sma200']:,.1f})")
-                        elif c == "rsi_oversold" and rsi_val is not None:
-                            st.markdown(f"✓ RSI < 35 ({rsi_val:.1f})")
-                else:
-                    st.info("Sin confluencia activa.")
-
-            # — Confirmación de Volumen
-            with zc3:
-                st.markdown("**Confirmación de Volumen**")
-
-                if vol_conf["ratio"] is not None:
-                    ratio = vol_conf["ratio"]
-                    conf  = vol_conf["confirmed"]
-                    st.metric(
-                        "Vol. actual / Promedio 20s",
-                        f"{ratio:.2f}x",
-                        delta="Confirmado ✓" if conf else "Sin confirmar",
-                        delta_color="normal" if conf else "off",
-                    )
-                    avg_m = vol_conf["avg_vol"] / 1e6
-                    cur_m = vol_conf["current_vol"] / 1e6
-                    st.caption(
-                        f"Sesión: {cur_m:.1f}M · Promedio 20s: {avg_m:.1f}M"
-                    )
-                    if conf:
-                        st.success(
-                            "Volumen > 1.2x promedio — flujo institucional probable."
+                    st.divider()
+                    # Alpha vs IPSA
+                    ipsa_ret = df_.get_ipsa_return_since(earliest)
+                    alpha    = calc_alpha(pnl_pct, ipsa_ret)
+                    al1, al2 = st.columns(2)
+                    if alpha is not None:
+                        al1.metric(
+                            f"Alpha vs IPSA (desde {earliest})",
+                            fmt_pct(alpha),
+                            delta=f"Acción {fmt_pct(pnl_pct)} | IPSA {fmt_pct(ipsa_ret)}",
+                            delta_color="off",
                         )
                     else:
-                        st.caption("Volumen insuficiente para confirmar rebote.")
-                else:
-                    st.caption("Datos de volumen no disponibles.")
+                        al1.metric("Alpha vs IPSA", "N/A", help="Datos IPSA no disponibles")
+
+                # ── TAB 2: Técnico ─────────────────────────────────────────────
+                with tab_tecnico:
+                    sr_data = calc_support_resistance(hist_2y)
+
+                    t1, t2, t3 = st.columns(3)
+                    with t1:
+                        st.markdown("**Medias Móviles**")
+                        if sma_data["sma50"]:
+                            st.metric("SMA 50", f"{sma_data['sma50']:,.0f}")
+                        else:
+                            st.metric("SMA 50", "< 50 barras")
+                        if sma_data["sma200"]:
+                            st.metric("SMA 200", f"{sma_data['sma200']:,.0f}")
+                            st.metric("Distancia SMA 200", fmt_pct(sma_data["stretch_pct"]))
+                        else:
+                            st.metric("SMA 200", "< 200 barras")
+                        if sma_data["signal"]:
+                            sig_col = {
+                                "GOLDEN_CROSS": "success", "BULLISH": "success",
+                                "OVERSOLD_EXTREME": "success",
+                                "DEATH_CROSS": "error", "BEARISH": "error",
+                                "OVERBOUGHT_EXTREME": "warning",
+                            }.get(sma_data["signal"], "info")
+                            getattr(st, sig_col)(f"Señal: {signal_label}")
+
+                    with t2:
+                        st.markdown("**Soporte & Resistencia (60d)**")
+                        if sr_data["support"]:
+                            st.metric("Soporte", f"{sr_data['support']:,.0f} CLP")
+                        if sr_data["resistance"]:
+                            st.metric("Resistencia", f"{sr_data['resistance']:,.0f} CLP")
+                        if sr_data["period_low"]:
+                            st.caption(
+                                f"Rango 60d: {sr_data['period_low']:,.0f} — "
+                                f"{sr_data['period_high']:,.0f} CLP"
+                            )
+
+                    with t3:
+                        st.markdown("**RSI & Zonas de Memoria**")
+                        hist_1y      = df_.get_historical_data(ticker, "1y")
+                        rsi_val      = calc_rsi(hist_1y)
+                        memory_zones = calc_memory_zones(hist_1y)
+                        vol_conf     = calc_volume_confirmation(hist_1y)
+                        buy_alert    = calc_buy_zone_alert(current_price, sma_data, rsi_val, memory_zones)
+
+                        if rsi_val is not None:
+                            rsi_label = (
+                                "Sobrevendido" if rsi_val < 35
+                                else "Sobrecomprado" if rsi_val > 70
+                                else "Neutral"
+                            )
+                            st.metric("RSI 14", f"{rsi_val:.1f}", delta=rsi_label, delta_color="off")
+                        else:
+                            st.metric("RSI 14", "N/A")
+
+                        alert = buy_alert["alert_level"]
+                        ALERT_UI = {
+                            "STRONG":   ("🟢 BUY ZONE — FUERTE",   "success"),
+                            "MODERATE": ("🟡 BUY ZONE — MODERADA", "warning"),
+                            "WATCH":    ("⚪ En Vigilancia",        "info"),
+                        }
+                        if alert:
+                            label_a, fn = ALERT_UI[alert]
+                            getattr(st, fn)(label_a)
+                            conds = buy_alert["conditions"]
+                            det   = buy_alert["details"]
+                            for c in conds:
+                                if c == "support_zone" and det.get("nearest_support"):
+                                    ns = det["nearest_support"]
+                                    st.markdown(f"✓ Soporte `{ns['level']:,.0f}` · {ns['touches']} toques")
+                                elif c == "sma200" and sma_data.get("sma200"):
+                                    st.markdown(f"✓ Cerca SMA 200 ({sma_data['sma200']:,.0f})")
+                                elif c == "rsi_oversold" and rsi_val is not None:
+                                    st.markdown(f"✓ RSI < 35 ({rsi_val:.1f})")
+                        else:
+                            st.info("Sin confluencia activa.")
+
+                        st.divider()
+                        if vol_conf["ratio"] is not None:
+                            st.metric(
+                                "Volumen / Prom. 20s",
+                                f"{vol_conf['ratio']:.2f}x",
+                                delta="Confirmado ✓" if vol_conf["confirmed"] else "Sin confirmar",
+                                delta_color="normal" if vol_conf["confirmed"] else "off",
+                            )
+
+                    # Zonas de memoria expander
+                    supports    = memory_zones.get("support_zones", [])
+                    resistances = memory_zones.get("resistance_zones", [])
+                    if supports or resistances:
+                        with st.expander("Zonas de Memoria (1Y)", expanded=False):
+                            zm1, zm2 = st.columns(2)
+                            with zm1:
+                                st.markdown("**Soportes**")
+                                for z in supports[:4]:
+                                    dist = ((current_price - z["level"]) / z["level"]) * 100
+                                    st.markdown(f"`{z['level']:,.0f}` — {z['touches']} toques · {dist:+.1f}%")
+                            with zm2:
+                                st.markdown("**Resistencias**")
+                                for z in resistances[:4]:
+                                    dist = ((z["level"] - current_price) / current_price) * 100
+                                    st.markdown(f"`{z['level']:,.0f}` — {z['touches']} toques · {dist:+.1f}%")
+
+                # ── TAB 3: Info ────────────────────────────────────────────────
+                with tab_info:
+                    info      = df_.get_stock_info(ticker)
+                    dividends = df_.get_dividends(ticker)
+
+                    pe_ratio = info.get("trailingPE")
+                    pb       = info.get("priceToBook")
+                    dy       = info.get("dividendYield")
+                    mcap     = info.get("marketCap")
+
+                    i1, i2, i3, i4 = st.columns(4)
+                    if pe_ratio:
+                        i1.metric("P/E (trailing)", f"{pe_ratio:.1f}x")
+                    if pb:
+                        i2.metric("P/B Ratio", f"{pb:.2f}x")
+                    if dy:
+                        # Yahoo Finance returns dividendYield already as a percentage for .SN tickers
+                        i3.metric("Dividend Yield", f"{dy:.2f}%")
+                    if mcap:
+                        unit = "B" if mcap >= 1e9 else "M"
+                        val  = mcap / 1e9 if mcap >= 1e9 else mcap / 1e6
+                        i4.metric("Market Cap", f"${val:.1f}{unit}")
+
+                    st.divider()
+                    if not dividends.empty:
+                        last_div    = float(dividends.iloc[-1])
+                        last_div_dt = dividends.index[-1]
+                        st.success(
+                            f"Último dividendo: {last_div:,.2f} CLP "
+                            f"({last_div_dt.strftime('%Y-%m-%d')})"
+                        )
+                    else:
+                        st.caption("Sin historial de dividendos.")
+
+                    cmf_url = (
+                        f"https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php"
+                        f"?s=emiso&q={short_tkr}"
+                    )
+                    st.markdown(f"[CMF Filings para {short_tkr}]({cmf_url})")
+                    st.caption(
+                        f"Empresa: {sg['company_name']} | "
+                        f"Cantidad: {int(qty):,} acciones | "
+                        f"Desde: {earliest}"
+                    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -923,7 +915,8 @@ with tab_briefing:
     st.caption(f"Santiago: {now_chile.strftime('%H:%M CLT')} | Market {'Open' if market_open else 'Closed'}")
 
     # ── Macro panel ───────────────────────────────────────────────────────────
-    st.markdown("### Global Macro Signals")
+    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='ov-card-title'>Global Macro Signals</div>", unsafe_allow_html=True)
 
     macro = df_.get_macro_data()
 
@@ -933,12 +926,6 @@ with tab_briefing:
         "USD/CLP":         m2,
         "S&P 500":         m3,
         "IPSA":            m4,
-    }
-    icons = {
-        "Copper (USD/lb)": "Copper",
-        "USD/CLP":         "USD/CLP",
-        "S&P 500":         "S&P 500",
-        "IPSA":            "IPSA",
     }
 
     for name, col in macro_cols_map.items():
@@ -957,10 +944,11 @@ with tab_briefing:
                 col.metric(name, "N/A")
                 col.caption(data.get("error", "Data unavailable"))
 
-    st.divider()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # ── FRED Macroeconomic Snapshot ────────────────────────────────────────────
-    st.markdown("### Snapshot Macroeconómico")
+    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='ov-card-title'>Snapshot Macroeconómico — Tasas de Referencia</div>", unsafe_allow_html=True)
 
     fred = df_.get_fred_data()
     dgs10   = fred.get("DGS10", {})
@@ -1051,13 +1039,15 @@ with tab_briefing:
         else:
             st.markdown("**Estatus de Riesgo:** N/A")
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
     # US10Y bond analysis
     if dgs10.get("value") is not None:
         bps  = dgs10["change_bps"]
         val  = dgs10["value"]
         date_str = dgs10["date"]
-        st.markdown("---")
-        st.markdown("**Análisis de Bonos del Tesoro (US10Y)**")
+        st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
+        st.markdown("<div class='ov-card-title'>Análisis de Bonos del Tesoro (US10Y)</div>", unsafe_allow_html=True)
         if bps > 0:
             st.markdown(
                 f"La tasa del bono del Tesoro a 10 años subió **{bps:+d} bps** hasta **{val:.2f}%** "
@@ -1107,11 +1097,11 @@ with tab_briefing:
                 f"Los retornos del IPSA dependerán principalmente de fundamentos locales: precio del cobre, "
                 f"tipo de cambio y expectativas de la actividad económica en Chile."
             )
-
-    st.divider()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Narrative ─────────────────────────────────────────────────────────────
-    st.markdown("### Market Context & Chilean Bell")
+    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='ov-card-title'>Market Context & Chilean Bell</div>", unsafe_allow_html=True)
     bullets = macro_narrative(macro)
     if bullets:
         for b in bullets:
@@ -1119,10 +1109,11 @@ with tab_briefing:
     else:
         st.info("Macro data unavailable. Use 'Refresh Market Data' in the sidebar.")
 
-    st.divider()
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Portfolio holdings watch ───────────────────────────────────────────────
-    st.markdown("### Holdings Watch — Key Levels & Overnight Context")
+    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
+    st.markdown("<div class='ov-card-title'>Holdings Watch — Key Levels & Overnight Context</div>", unsafe_allow_html=True)
 
     if not holdings:
         st.info("No holdings to brief on. Add positions in 'Manage Holdings'.")
@@ -1210,6 +1201,8 @@ with tab_briefing:
                         f"?s=emiso&q={short_tkr}"
                     )
                     st.markdown(f"[CMF Filings]({cmf_url})")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
