@@ -294,18 +294,21 @@ with tab_overview:
 
     st.markdown("<div style='margin-top:1.5rem'></div>", unsafe_allow_html=True)
 
-    # ── Build shared allocation data ───────────────────────────────────────────
-    alloc_rows = []
+    # ── Build shared allocation data (group multiple lots of same ticker) ──────
+    alloc_agg: dict = {}
     for h in holdings:
         pd_data = prices.get(h["ticker"], {})
         price   = pd_data.get("price")
         if price:
             short = h["ticker"].replace(".SN", "")
-            alloc_rows.append({
-                "label":  short,
-                "sector": IPSA_SECTORS.get(short, "Other"),
-                "value":  h["quantity"] * price,
-            })
+            if short not in alloc_agg:
+                alloc_agg[short] = {
+                    "label":  short,
+                    "sector": IPSA_SECTORS.get(short, "Other"),
+                    "value":  0.0,
+                }
+            alloc_agg[short]["value"] += h["quantity"] * price
+    alloc_rows = list(alloc_agg.values())
     if cash > 0:
         alloc_rows.append({"label": "Cash", "sector": "Cash", "value": cash})
 
@@ -314,96 +317,124 @@ with tab_overview:
 
     # ── Dynamic Donut Chart ────────────────────────────────────────────────────
     with col_donut:
-        # Selector aligned right inside the column
-        _sel_col1, _sel_col2 = st.columns([1, 1])
-        with _sel_col2:
+        _c1, _c2 = st.columns([1, 1])
+        with _c2:
             chart_mode = st.radio(
                 "Vista",
-                options=["Por Posición", "Por Sector"],
+                options=["Clases", "Sectores"],
                 horizontal=True,
                 label_visibility="collapsed",
                 key="overview_chart_mode",
             )
 
-        _PALETTE = [
-            "#2E4057", "#048A81", "#54C6EB", "#8EE3EF",
-            "#CAF0F8", "#3A86FF", "#8338EC", "#FB5607",
-            "#FFBE0B", "#06D6A0", "#EF476F", "#118AB2",
+        _DARK_BG  = "#131c2e"
+        _BLUE_PAL = [
+            "#3a86ff", "#0077b6", "#48cae4", "#00b4d8",
+            "#023e8a", "#0096c7", "#90e0ef", "#56cfe1",
+            "#48bfe3", "#ade8f4", "#caf0f8", "#1a6fb5",
         ]
 
         if alloc_rows:
-            df_alloc = pd.DataFrame(alloc_rows)
+            df_alloc  = pd.DataFrame(alloc_rows)
+            total_val = df_alloc["value"].sum()
 
-            if chart_mode == "Por Posición":
+            if chart_mode == "Clases":
+                df_plot        = df_alloc.copy()
+                df_plot["pct"] = df_plot["value"] / total_val * 100
+                df_plot["lbl"] = df_plot.apply(
+                    lambda r: f"{r['label']}  {r['pct']:.1f}%", axis=1
+                )
                 fig_donut = px.pie(
-                    df_alloc,
-                    values="value",
-                    names="label",
-                    title="Asignación por Posición",
-                    color_discrete_sequence=_PALETTE,
-                    hole=0.42,
-                    template="plotly_white",
+                    df_plot, values="value", names="lbl",
+                    color_discrete_sequence=_BLUE_PAL, hole=0.54,
                 )
             else:
-                df_sector = df_alloc.groupby("sector", as_index=False)["value"].sum()
+                df_sec         = df_alloc.groupby("sector", as_index=False)["value"].sum()
+                df_sec["pct"]  = df_sec["value"] / total_val * 100
+                df_sec["lbl"]  = df_sec.apply(
+                    lambda r: f"{r['sector']}  {r['pct']:.1f}%", axis=1
+                )
                 fig_donut = px.pie(
-                    df_sector,
-                    values="value",
-                    names="sector",
-                    title="Asignación por Sector",
-                    color_discrete_sequence=_PALETTE,
-                    hole=0.42,
-                    template="plotly_white",
+                    df_sec, values="value", names="lbl",
+                    color_discrete_sequence=_BLUE_PAL, hole=0.54,
                 )
 
             fig_donut.update_traces(
-                textposition="inside",
-                textinfo="percent+label",
-                textfont_size=11,
-                marker=dict(line=dict(color="#ffffff", width=2)),
+                textinfo="none",
+                marker=dict(line=dict(color=_DARK_BG, width=3)),
             )
             fig_donut.update_layout(
+                title=dict(
+                    text="Distribución",
+                    font=dict(size=13, color="#c8d6e5"),
+                    x=0.0, xanchor="left", pad=dict(l=8, t=4),
+                ),
+                paper_bgcolor=_DARK_BG,
+                plot_bgcolor=_DARK_BG,
                 height=370,
-                margin=dict(t=40, b=10, l=10, r=10),
-                showlegend=False,
-                title_font=dict(size=13, color="#444444"),
-                title_x=0.5,
+                margin=dict(t=44, b=70, l=12, r=12),
+                showlegend=True,
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom", y=-0.28,
+                    xanchor="left", x=0,
+                    font=dict(color="#8fa3b8", size=11),
+                    itemsizing="constant",
+                    bgcolor="rgba(0,0,0,0)",
+                ),
             )
             st.plotly_chart(fig_donut, use_container_width=True)
         else:
             st.info("Add holdings to see allocation.")
 
-    # ── Holdings Summary Table ─────────────────────────────────────────────────
+    # ── Holdings Summary (grouped by ticker) ───────────────────────────────────
     with col_table:
         st.markdown(
-            "<p style='font-size:1.05rem;font-weight:600;color:#333;margin-bottom:0.4rem'>"
-            "Holdings Summary</p>",
+            "<p style='font-size:1rem;font-weight:600;color:#4a5568;"
+            "letter-spacing:0.02em;margin-bottom:0.5rem'>Holdings Summary</p>",
             unsafe_allow_html=True,
         )
 
         if holdings:
-            rows = []
+            # Consolidate multiple lots of the same ticker into one row
+            grouped_h: dict = {}
             for h in holdings:
-                pd_data       = prices.get(h["ticker"], {})
+                t = h["ticker"]
+                if t not in grouped_h:
+                    grouped_h[t] = {
+                        "ticker":     t,
+                        "quantity":   h["quantity"],
+                        "total_cost": h["quantity"] * h["buy_price"],
+                    }
+                else:
+                    grouped_h[t]["quantity"]   += h["quantity"]
+                    grouped_h[t]["total_cost"] += h["quantity"] * h["buy_price"]
+
+            rows = []
+            for t, g in grouped_h.items():
+                pd_data       = prices.get(t, {})
                 current_price = pd_data.get("price")
-                ts            = pd_data.get("timestamp")
-                err           = pd_data.get("error")
+                qty           = g["quantity"]
+                total_cost    = g["total_cost"]
+                avg_buy       = total_cost / qty if qty else 0
 
                 if current_price:
-                    pnl = calc_holding_pnl(h, current_price)
+                    cur_val  = qty * current_price
+                    pnl_clp  = cur_val - total_cost
+                    pnl_pct  = (pnl_clp / total_cost * 100) if total_cost else 0
                     rows.append({
-                        "Ticker":      h["ticker"].replace(".SN", ""),
-                        "Qty":         int(h["quantity"]),
-                        "Buy (CLP)":   h["buy_price"],
-                        "Value (CLP)": pnl["current_value"],
-                        "P&L CLP":     pnl["gain_loss_clp"],
-                        "P&L %":       pnl["gain_loss_pct"],
+                        "Ticker":      t.replace(".SN", ""),
+                        "Qty":         int(qty),
+                        "Buy (CLP)":   avg_buy,
+                        "Value (CLP)": cur_val,
+                        "P&L CLP":     pnl_clp,
+                        "P&L %":       pnl_pct,
                     })
                 else:
                     rows.append({
-                        "Ticker":      h["ticker"].replace(".SN", ""),
-                        "Qty":         int(h["quantity"]),
-                        "Buy (CLP)":   h["buy_price"],
+                        "Ticker":      t.replace(".SN", ""),
+                        "Qty":         int(qty),
+                        "Buy (CLP)":   avg_buy,
                         "Value (CLP)": None,
                         "P&L CLP":     None,
                         "P&L %":       None,
@@ -411,68 +442,36 @@ with tab_overview:
 
             df_holdings = pd.DataFrame(rows)
 
-            # Heatmap gradient on P&L %
-            def _color_pnl_pct(val):
+            def _cell_pnl(val):
                 if pd.isna(val):
                     return ""
                 if val > 0:
-                    intensity = min(val / 30, 1.0)
-                    r = int(220 - intensity * 60)
-                    g = int(240 - intensity * 20)
-                    b = int(220 - intensity * 60)
-                    return f"background-color: rgb({r},{g},{b}); color: #1a5c1a"
-                elif val < 0:
-                    intensity = min(abs(val) / 30, 1.0)
-                    r = int(240 - intensity * 20)
-                    g = int(220 - intensity * 60)
-                    b = int(220 - intensity * 60)
-                    return f"background-color: rgb({r},{g},{b}); color: #7a1a1a"
+                    a = min(0.08 + (val / 25) * 0.22, 0.30)
+                    return f"background-color: rgba(16,185,129,{a:.2f}); color: #065f46"
+                if val < 0:
+                    a = min(0.08 + (abs(val) / 25) * 0.22, 0.30)
+                    return f"background-color: rgba(239,68,68,{a:.2f}); color: #7f1d1d"
                 return ""
-
-            def _style_table(df):
-                styles = pd.DataFrame("", index=df.index, columns=df.columns)
-                if "P&L %" in df.columns:
-                    styles["P&L %"] = df["P&L %"].map(_color_pnl_pct)
-                # Right-align numeric cols via CSS (applied via format, not style)
-                return styles
 
             styled = (
                 df_holdings.style
-                .apply(_style_table, axis=None)
+                .map(_cell_pnl, subset=["P&L %"])
                 .format({
                     "Qty":         "{:,}",
-                    "Buy (CLP)":   lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A",
-                    "Value (CLP)": lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A",
-                    "P&L CLP":     lambda x: f"${x:,.0f}" if pd.notna(x) else "N/A",
-                    "P&L %":       lambda x: (f"+{x:.1f}%" if x >= 0 else f"{x:.1f}%") if pd.notna(x) else "N/A",
+                    "Buy (CLP)":   lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
+                    "Value (CLP)": lambda x: f"${x:,.0f}" if pd.notna(x) else "—",
+                    "P&L CLP":     lambda x: (f"+${x:,.0f}" if x >= 0 else f"−${abs(x):,.0f}") if pd.notna(x) else "—",
+                    "P&L %":       lambda x: (f"+{x:.1f}%" if x >= 0 else f"{x:.1f}%") if pd.notna(x) else "—",
                 })
                 .set_properties(**{"text-align": "right"}, subset=["Qty", "Buy (CLP)", "Value (CLP)", "P&L CLP", "P&L %"])
-                .set_properties(**{"text-align": "left"}, subset=["Ticker"])
-                .set_table_styles([
-                    {"selector": "th", "props": [
-                        ("background-color", "#f7f8fa"),
-                        ("color", "#444444"),
-                        ("font-size", "0.82rem"),
-                        ("font-weight", "600"),
-                        ("border-bottom", "1.5px solid #e0e0e0"),
-                        ("padding", "8px 10px"),
-                    ]},
-                    {"selector": "td", "props": [
-                        ("color", "#333333"),
-                        ("font-size", "0.85rem"),
-                        ("border-bottom", "1px solid #f0f0f0"),
-                        ("padding", "7px 10px"),
-                    ]},
-                    {"selector": "tr:hover td", "props": [
-                        ("background-color", "#f5f7ff"),
-                    ]},
-                ])
+                .set_properties(**{"text-align": "left", "font-weight": "600"}, subset=["Ticker"])
+                .hide(axis="index")
             )
 
             st.dataframe(
                 styled,
                 use_container_width=True,
-                height=min(420, 56 + 36 * len(rows)),
+                height=min(400, 48 + 38 * len(rows)),
             )
         else:
             st.info("No holdings yet. Use the 'Manage Holdings' tab to add positions.")
