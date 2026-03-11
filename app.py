@@ -317,71 +317,58 @@ with tab_overview:
 
     # ── Dynamic Donut Chart ────────────────────────────────────────────────────
     with col_donut:
-        _c1, _c2 = st.columns([1, 1])
-        with _c2:
-            chart_mode = st.radio(
+        _lbl_col, _btn_col = st.columns([1, 1])
+        with _lbl_col:
+            st.markdown(
+                "<p style='font-size:0.92rem;font-weight:600;color:#4a5568;"
+                "margin:0;padding-top:9px;letter-spacing:0.03em'>Distribución</p>",
+                unsafe_allow_html=True,
+            )
+        with _btn_col:
+            chart_mode = st.segmented_control(
                 "Vista",
                 options=["Clases", "Sectores"],
-                horizontal=True,
-                label_visibility="collapsed",
+                default="Clases",
                 key="overview_chart_mode",
+                label_visibility="collapsed",
             )
 
-        _DARK_BG  = "#131c2e"
-        _BLUE_PAL = [
-            "#3a86ff", "#0077b6", "#48cae4", "#00b4d8",
-            "#023e8a", "#0096c7", "#90e0ef", "#56cfe1",
-            "#48bfe3", "#ade8f4", "#caf0f8", "#1a6fb5",
+        _PALETTE = [
+            "#3a86ff", "#06d6a0", "#ffbe0b", "#fb5607",
+            "#8338ec", "#ff006e", "#0077b6", "#f4a261",
+            "#2ec4b6", "#e76f51", "#457b9d", "#a8dadc",
+            "#e9c46a", "#264653", "#90be6d",
         ]
 
         if alloc_rows:
-            df_alloc  = pd.DataFrame(alloc_rows)
-            total_val = df_alloc["value"].sum()
+            df_alloc = pd.DataFrame(alloc_rows)
 
             if chart_mode == "Clases":
-                df_plot        = df_alloc.copy()
-                df_plot["pct"] = df_plot["value"] / total_val * 100
-                df_plot["lbl"] = df_plot.apply(
-                    lambda r: f"{r['label']}  {r['pct']:.1f}%", axis=1
-                )
-                fig_donut = px.pie(
-                    df_plot, values="value", names="lbl",
-                    color_discrete_sequence=_BLUE_PAL, hole=0.54,
-                )
+                df_plot   = df_alloc.groupby("label",  as_index=False)["value"].sum()
+                names_col = "label"
             else:
-                df_sec         = df_alloc.groupby("sector", as_index=False)["value"].sum()
-                df_sec["pct"]  = df_sec["value"] / total_val * 100
-                df_sec["lbl"]  = df_sec.apply(
-                    lambda r: f"{r['sector']}  {r['pct']:.1f}%", axis=1
-                )
-                fig_donut = px.pie(
-                    df_sec, values="value", names="lbl",
-                    color_discrete_sequence=_BLUE_PAL, hole=0.54,
-                )
+                df_plot   = df_alloc.groupby("sector", as_index=False)["value"].sum()
+                names_col = "sector"
 
+            fig_donut = px.pie(
+                df_plot,
+                values="value",
+                names=names_col,
+                color_discrete_sequence=_PALETTE,
+                hole=0.44,
+                template="plotly_white",
+            )
             fig_donut.update_traces(
-                textinfo="none",
-                marker=dict(line=dict(color=_DARK_BG, width=3)),
+                textposition="inside",
+                textinfo="percent+label",
+                textfont_size=11,
+                marker=dict(line=dict(color="#ffffff", width=2)),
+                hovertemplate="<b>%{label}</b><br>%{percent:.1%}<extra></extra>",
             )
             fig_donut.update_layout(
-                title=dict(
-                    text="Distribución",
-                    font=dict(size=13, color="#c8d6e5"),
-                    x=0.0, xanchor="left", pad=dict(l=8, t=4),
-                ),
-                paper_bgcolor=_DARK_BG,
-                plot_bgcolor=_DARK_BG,
-                height=370,
-                margin=dict(t=44, b=70, l=12, r=12),
-                showlegend=True,
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom", y=-0.28,
-                    xanchor="left", x=0,
-                    font=dict(color="#8fa3b8", size=11),
-                    itemsizing="constant",
-                    bgcolor="rgba(0,0,0,0)",
-                ),
+                height=360,
+                margin=dict(t=10, b=10, l=10, r=10),
+                showlegend=False,
             )
             st.plotly_chart(fig_donut, use_container_width=True)
         else:
