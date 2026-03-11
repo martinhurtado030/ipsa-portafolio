@@ -405,160 +405,129 @@ with tab_overview:
     # ── Layout: [dynamic donut | holdings table] ───────────────────────────────
     col_donut, col_table = st.columns([1, 1.2], gap="large")
 
-    # ── Dynamic Donut Chart card ───────────────────────────────────────────────
+    _PALETTE = [
+        "#3a86ff", "#06d6a0", "#ffbe0b", "#fb5607",
+        "#8338ec", "#ff006e", "#0077b6", "#f4a261",
+        "#2ec4b6", "#e76f51", "#457b9d", "#a8dadc",
+        "#e9c46a", "#264653", "#90be6d",
+    ]
+
+    # ── Dynamic Donut Chart ────────────────────────────────────────────────────
     with col_donut:
-        st.markdown("<div class='ov-card' style='min-height:420px'>", unsafe_allow_html=True)
-        st.markdown("<div class='ov-card-title'>Distribución</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("<div class='ov-card-title'>Distribución</div>", unsafe_allow_html=True)
+            chart_mode = st.segmented_control(
+                "Vista",
+                options=["Clases", "Sectores"],
+                default="Clases",
+                key="overview_chart_mode",
+                label_visibility="collapsed",
+            )
+            if alloc_rows:
+                df_alloc = pd.DataFrame(alloc_rows)
 
-        chart_mode = st.segmented_control(
-            "Vista",
-            options=["Clases", "Sectores"],
-            default="Clases",
-            key="overview_chart_mode",
-            label_visibility="collapsed",
-        )
+                if chart_mode == "Clases":
+                    df_plot   = df_alloc.groupby("label",  as_index=False)["value"].sum()
+                    names_col = "label"
+                else:
+                    df_plot   = df_alloc.groupby("sector", as_index=False)["value"].sum()
+                    names_col = "sector"
 
-        _PALETTE = [
-            "#3a86ff", "#06d6a0", "#ffbe0b", "#fb5607",
-            "#8338ec", "#ff006e", "#0077b6", "#f4a261",
-            "#2ec4b6", "#e76f51", "#457b9d", "#a8dadc",
-            "#e9c46a", "#264653", "#90be6d",
-        ]
-
-        if alloc_rows:
-            df_alloc = pd.DataFrame(alloc_rows)
-            total_val = df_alloc["value"].sum()
-
-            if chart_mode == "Clases":
-                df_plot   = df_alloc.groupby("label",  as_index=False)["value"].sum()
-                names_col = "label"
+                fig_donut = px.pie(
+                    df_plot,
+                    values="value",
+                    names=names_col,
+                    color_discrete_sequence=_PALETTE,
+                    hole=0.46,
+                    template="plotly_white",
+                )
+                fig_donut.update_traces(
+                    textposition="inside",
+                    textinfo="percent+label",
+                    textfont_size=11,
+                    marker=dict(line=dict(color="#ffffff", width=2.5)),
+                    hovertemplate="<b>%{label}</b><br>$%{value:,.0f} CLP<br>%{percent:.1%}<extra></extra>",
+                    pull=[0.03] * len(df_plot),
+                )
+                fig_donut.update_layout(
+                    height=340,
+                    margin=dict(t=10, b=10, l=10, r=10),
+                    showlegend=False,
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    transition={"duration": 500, "easing": "cubic-in-out"},
+                )
+                st.plotly_chart(fig_donut, use_container_width=True)
             else:
-                df_plot   = df_alloc.groupby("sector", as_index=False)["value"].sum()
-                names_col = "sector"
+                st.info("Add holdings to see allocation.")
 
-            fig_donut = px.pie(
-                df_plot,
-                values="value",
-                names=names_col,
-                color_discrete_sequence=_PALETTE,
-                hole=0.46,
-                template="plotly_white",
-            )
-            fig_donut.update_traces(
-                textposition="inside",
-                textinfo="percent+label",
-                textfont_size=11,
-                marker=dict(line=dict(color="#ffffff", width=2.5)),
-                hovertemplate="<b>%{label}</b><br>$%{value:,.0f} CLP<br>%{percent:.1%}<extra></extra>",
-                pull=[0.03] * len(df_plot),
-            )
-            fig_donut.update_layout(
-                height=340,
-                margin=dict(t=10, b=10, l=10, r=10),
-                showlegend=False,
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                transition={"duration": 500, "easing": "cubic-in-out"},
-            )
-            st.plotly_chart(fig_donut, use_container_width=True)
-        else:
-            st.info("Add holdings to see allocation.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Holdings Summary card (grouped by ticker) ──────────────────────────────
+    # ── Holdings Summary (grouped by ticker) ──────────────────────────────────
     with col_table:
-        st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
-        st.markdown("<div class='ov-card-title'>Holdings Summary</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("<div class='ov-card-title'>Holdings Summary</div>", unsafe_allow_html=True)
 
-        if holdings:
-            # Consolidate multiple lots of the same ticker into one row
-            grouped_h: dict = {}
-            for h in holdings:
-                t = h["ticker"]
-                if t not in grouped_h:
-                    grouped_h[t] = {
-                        "ticker":     t,
-                        "quantity":   h["quantity"],
-                        "total_cost": h["quantity"] * h["buy_price"],
-                    }
-                else:
-                    grouped_h[t]["quantity"]   += h["quantity"]
-                    grouped_h[t]["total_cost"] += h["quantity"] * h["buy_price"]
+            if holdings:
+                grouped_h: dict = {}
+                for h in holdings:
+                    t = h["ticker"]
+                    if t not in grouped_h:
+                        grouped_h[t] = {
+                            "ticker":     t,
+                            "quantity":   h["quantity"],
+                            "total_cost": h["quantity"] * h["buy_price"],
+                        }
+                    else:
+                        grouped_h[t]["quantity"]   += h["quantity"]
+                        grouped_h[t]["total_cost"] += h["quantity"] * h["buy_price"]
 
-            rows = []
-            for t, g in grouped_h.items():
-                pd_data       = prices.get(t, {})
-                current_price = pd_data.get("price")
-                qty           = g["quantity"]
-                total_cost    = g["total_cost"]
-                avg_buy       = total_cost / qty if qty else 0
+                rows = []
+                for t, g in grouped_h.items():
+                    pd_data       = prices.get(t, {})
+                    current_price = pd_data.get("price")
+                    qty           = g["quantity"]
+                    total_cost    = g["total_cost"]
+                    avg_buy       = total_cost / qty if qty else 0
 
-                if current_price:
-                    cur_val  = qty * current_price
-                    pnl_clp  = cur_val - total_cost
-                    pnl_pct  = (pnl_clp / total_cost * 100) if total_cost else 0
-                    rows.append({
-                        "Ticker":      t.replace(".SN", ""),
-                        "Qty":         int(qty),
-                        "Precio Compra": avg_buy,
-                        "Valor (CLP)": cur_val,
-                        "P&L CLP":     pnl_clp,
-                        "P&L %":       pnl_pct / 100,  # stored as ratio for column_config
-                    })
-                else:
-                    rows.append({
-                        "Ticker":      t.replace(".SN", ""),
-                        "Qty":         int(qty),
-                        "Precio Compra": avg_buy,
-                        "Valor (CLP)": None,
-                        "P&L CLP":     None,
-                        "P&L %":       None,
-                    })
+                    if current_price:
+                        cur_val = qty * current_price
+                        pnl_clp = cur_val - total_cost
+                        pnl_pct = (pnl_clp / total_cost * 100) if total_cost else 0
+                        rows.append({
+                            "Ticker":        t.replace(".SN", ""),
+                            "Qty":           int(qty),
+                            "Precio Compra": avg_buy,
+                            "Valor (CLP)":   cur_val,
+                            "P&L CLP":       pnl_clp,
+                            "P&L %":         pnl_pct,
+                        })
+                    else:
+                        rows.append({
+                            "Ticker":        t.replace(".SN", ""),
+                            "Qty":           int(qty),
+                            "Precio Compra": avg_buy,
+                            "Valor (CLP)":   None,
+                            "P&L CLP":       None,
+                            "P&L %":         None,
+                        })
 
-            df_holdings = pd.DataFrame(rows)
-
-            # Numeric P&L % column for progress bar — keep raw ratio
-            df_holdings["_pnl_bar"] = df_holdings["P&L %"].fillna(0.0)
-
-            st.dataframe(
-                df_holdings.drop(columns=["_pnl_bar"]),
-                use_container_width=True,
-                height=min(420, 48 + 40 * len(rows)),
-                hide_index=True,
-                column_config={
-                    "Ticker": st.column_config.TextColumn(
-                        "Ticker",
-                        width="small",
-                    ),
-                    "Qty": st.column_config.NumberColumn(
-                        "Cantidad",
-                        format="%d",
-                        width="small",
-                    ),
-                    "Precio Compra": st.column_config.NumberColumn(
-                        "Precio Compra",
-                        format="$%,.0f",
-                    ),
-                    "Valor (CLP)": st.column_config.NumberColumn(
-                        "Valor (CLP)",
-                        format="$%,.0f",
-                    ),
-                    "P&L CLP": st.column_config.NumberColumn(
-                        "P&L CLP",
-                        format="$%,.0f",
-                    ),
-                    "P&L %": st.column_config.NumberColumn(
-                        "P&L %",
-                        format="%.2f%%",
-                        help="Ganancia/pérdida porcentual desde el precio de compra promedio",
-                    ),
-                },
-            )
-        else:
-            st.info("No holdings yet. Use the 'Manage Holdings' tab to add positions.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+                df_holdings = pd.DataFrame(rows)
+                st.dataframe(
+                    df_holdings,
+                    use_container_width=True,
+                    height=min(420, 48 + 40 * len(rows)),
+                    hide_index=True,
+                    column_config={
+                        "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+                        "Qty": st.column_config.NumberColumn("Cantidad", format="%d", width="small"),
+                        "Precio Compra": st.column_config.NumberColumn("Precio Compra", format="$%,.0f"),
+                        "Valor (CLP)":   st.column_config.NumberColumn("Valor (CLP)", format="$%,.0f"),
+                        "P&L CLP":       st.column_config.NumberColumn("P&L CLP", format="$%,.0f"),
+                        "P&L %":         st.column_config.NumberColumn("P&L %", format="%.2f%%",
+                            help="Ganancia/pérdida desde precio promedio de compra"),
+                    },
+                )
+            else:
+                st.info("No holdings yet. Use the 'Manage Holdings' tab to add positions.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -915,294 +884,248 @@ with tab_briefing:
     st.caption(f"Santiago: {now_chile.strftime('%H:%M CLT')} | Market {'Open' if market_open else 'Closed'}")
 
     # ── Macro panel ───────────────────────────────────────────────────────────
-    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='ov-card-title'>Global Macro Signals</div>", unsafe_allow_html=True)
-
-    macro = df_.get_macro_data()
-
-    m1, m2, m3, m4 = st.columns(4)
-    macro_cols_map = {
-        "Copper (USD/lb)": m1,
-        "USD/CLP":         m2,
-        "S&P 500":         m3,
-        "IPSA":            m4,
-    }
-
-    for name, col in macro_cols_map.items():
-        data = macro.get(name, {})
-        with col:
-            if data.get("price"):
-                chg = data.get("change_pct", 0) or 0
-                col.metric(
-                    name,
-                    f"{data['price']:,.3f}" if name == "Copper (USD/lb)" else f"{data['price']:,.2f}",
-                    delta=fmt_pct(chg),
-                    delta_color="normal",
-                )
-                col.caption(f"Last: {ts_str(data.get('timestamp'))}")
-            else:
-                col.metric(name, "N/A")
-                col.caption(data.get("error", "Data unavailable"))
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("<div class='ov-card-title'>Global Macro Signals</div>", unsafe_allow_html=True)
+        macro = df_.get_macro_data()
+        m1, m2, m3, m4 = st.columns(4)
+        macro_cols_map = {
+            "Copper (USD/lb)": m1,
+            "USD/CLP":         m2,
+            "S&P 500":         m3,
+            "IPSA":            m4,
+        }
+        for name, col in macro_cols_map.items():
+            data = macro.get(name, {})
+            with col:
+                if data.get("price"):
+                    chg = data.get("change_pct", 0) or 0
+                    col.metric(
+                        name,
+                        f"{data['price']:,.3f}" if name == "Copper (USD/lb)" else f"{data['price']:,.2f}",
+                        delta=fmt_pct(chg),
+                        delta_color="normal",
+                    )
+                    col.caption(f"Last: {ts_str(data.get('timestamp'))}")
+                else:
+                    col.metric(name, "N/A")
+                    col.caption(data.get("error", "Data unavailable"))
 
     # ── FRED Macroeconomic Snapshot ────────────────────────────────────────────
-    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='ov-card-title'>Snapshot Macroeconómico — Tasas de Referencia</div>", unsafe_allow_html=True)
-
-    fred = df_.get_fred_data()
-    dgs10   = fred.get("DGS10", {})
+    fred     = df_.get_fred_data()
+    dgs10    = fred.get("DGS10", {})
     fedfunds = fred.get("FEDFUNDS", {})
-    bcch    = fred.get("IRSTCI01CLM156N", {})
-    clrate  = fred.get("IRLTLT01CLM156N", {})
+    bcch     = fred.get("IRSTCI01CLM156N", {})
+    clrate   = fred.get("IRLTLT01CLM156N", {})
 
-    fs1, fs2, fs3, fs4, fs5 = st.columns(5)
+    with st.container(border=True):
+        st.markdown("<div class='ov-card-title'>Snapshot Macroeconómico — Tasas de Referencia</div>", unsafe_allow_html=True)
+        fs1, fs2, fs3, fs4, fs5 = st.columns(5)
 
-    # Fed Funds Rate
-    with fs1:
-        if fedfunds.get("value") is not None:
-            bps = fedfunds.get("change_bps", 0)
-            bps_str = f"{bps:+d} bps" if bps != 0 else "sin cambio"
-            st.metric(
-                "Fed Funds Rate",
-                f"{fedfunds['value']:.2f}%",
-                delta=bps_str,
-                delta_color="inverse",
-            )
-            st.caption(f"FRED · {fedfunds['date']}")
-        else:
-            st.metric("Fed Funds Rate", "N/A")
-            st.caption(fedfunds.get("error", "Unavailable"))
-
-    # US 10Y Treasury
-    with fs2:
-        if dgs10.get("value") is not None:
-            bps = dgs10["change_bps"]
-            bps_str = f"{bps:+d} bps" if bps != 0 else "0 bps"
-            st.metric(
-                "US Treasury 10Y",
-                f"{dgs10['value']:.2f}%",
-                delta=bps_str,
-                delta_color="inverse",
-            )
-            st.caption(f"FRED · {dgs10['date']}")
-        else:
-            st.metric("US Treasury 10Y", "N/A")
-            st.caption(dgs10.get("error", "Unavailable"))
-
-    # BCCh policy rate
-    with fs3:
-        if bcch.get("value") is not None:
-            bps = bcch.get("change_bps", 0)
-            bps_str = f"{bps:+d} bps" if bps != 0 else "sin cambio"
-            st.metric(
-                "Tasa BCCh (TPM)",
-                f"{bcch['value']:.2f}%",
-                delta=bps_str,
-                delta_color="inverse",
-            )
-            st.caption(f"FRED · {bcch['date']}")
-        else:
-            st.metric("Tasa BCCh (TPM)", "N/A")
-            st.caption(bcch.get("error", "Unavailable"))
-
-    # Chile 10Y bond
-    with fs4:
-        if clrate.get("value") is not None:
-            st.metric("Bono Chile 10Y", f"{clrate['value']:.2f}%")
-            st.caption(f"FRED · {clrate['date']}")
-        else:
-            st.metric("Bono Chile 10Y", "N/A")
-            st.caption(clrate.get("error", "Unavailable"))
-
-    # Risk status
-    with fs5:
-        if dgs10.get("value") is not None:
-            bps = dgs10["change_bps"]
-            val = dgs10["value"]
-            if bps > 5:
-                status, color = "⚠ ADVERSO", "red"
-            elif bps < -5:
-                status, color = "✓ FAVORABLE", "green"
-            elif val > 4.5:
-                status, color = "⚠ ADVERSO", "red"
-            elif val < 3.5:
-                status, color = "✓ FAVORABLE", "green"
+        with fs1:
+            if fedfunds.get("value") is not None:
+                bps = fedfunds.get("change_bps", 0)
+                bps_str = f"{bps:+d} bps" if bps != 0 else "sin cambio"
+                st.metric("Fed Funds Rate", f"{fedfunds['value']:.2f}%", delta=bps_str, delta_color="inverse")
+                st.caption(f"FRED · {fedfunds['date']}")
             else:
-                status, color = "➖ NEUTRAL", "gray"
-            st.markdown("**Estatus de Riesgo**")
-            st.markdown(
-                f"<span style='font-size:1.4rem;font-weight:700;color:{color}'>{status}</span>",
-                unsafe_allow_html=True,
-            )
-            st.caption("Basado en tendencia US10Y")
-        else:
-            st.markdown("**Estatus de Riesgo:** N/A")
+                st.metric("Fed Funds Rate", "N/A")
+                st.caption(fedfunds.get("error", "Unavailable"))
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        with fs2:
+            if dgs10.get("value") is not None:
+                bps = dgs10["change_bps"]
+                bps_str = f"{bps:+d} bps" if bps != 0 else "0 bps"
+                st.metric("US Treasury 10Y", f"{dgs10['value']:.2f}%", delta=bps_str, delta_color="inverse")
+                st.caption(f"FRED · {dgs10['date']}")
+            else:
+                st.metric("US Treasury 10Y", "N/A")
+                st.caption(dgs10.get("error", "Unavailable"))
+
+        with fs3:
+            if bcch.get("value") is not None:
+                bps = bcch.get("change_bps", 0)
+                bps_str = f"{bps:+d} bps" if bps != 0 else "sin cambio"
+                st.metric("Tasa BCCh (TPM)", f"{bcch['value']:.2f}%", delta=bps_str, delta_color="inverse")
+                st.caption(f"FRED · {bcch['date']}")
+            else:
+                st.metric("Tasa BCCh (TPM)", "N/A")
+                st.caption(bcch.get("error", "Unavailable"))
+
+        with fs4:
+            if clrate.get("value") is not None:
+                st.metric("Bono Chile 10Y", f"{clrate['value']:.2f}%")
+                st.caption(f"FRED · {clrate['date']}")
+            else:
+                st.metric("Bono Chile 10Y", "N/A")
+                st.caption(clrate.get("error", "Unavailable"))
+
+        with fs5:
+            if dgs10.get("value") is not None:
+                bps = dgs10["change_bps"]
+                val = dgs10["value"]
+                if bps > 5:
+                    status, color = "⚠ ADVERSO", "red"
+                elif bps < -5:
+                    status, color = "✓ FAVORABLE", "green"
+                elif val > 4.5:
+                    status, color = "⚠ ADVERSO", "red"
+                elif val < 3.5:
+                    status, color = "✓ FAVORABLE", "green"
+                else:
+                    status, color = "➖ NEUTRAL", "gray"
+                st.markdown("**Estatus de Riesgo**")
+                st.markdown(
+                    f"<span style='font-size:1.4rem;font-weight:700;color:{color}'>{status}</span>",
+                    unsafe_allow_html=True,
+                )
+                st.caption("Basado en tendencia US10Y")
+            else:
+                st.markdown("**Estatus de Riesgo:** N/A")
 
     # US10Y bond analysis
     if dgs10.get("value") is not None:
         bps  = dgs10["change_bps"]
         val  = dgs10["value"]
         date_str = dgs10["date"]
-        st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
-        st.markdown("<div class='ov-card-title'>Análisis de Bonos del Tesoro (US10Y)</div>", unsafe_allow_html=True)
-        if bps > 0:
-            st.markdown(
-                f"La tasa del bono del Tesoro a 10 años subió **{bps:+d} bps** hasta **{val:.2f}%** "
-                f"(última lectura FRED: {date_str}). "
-                f"Un alza en el US10Y eleva la tasa de descuento global, **presionando a la baja el valor "
-                f"presente de los flujos de caja** de las acciones chilenas — especialmente utilities "
-                f"reguladas (ENELAM, COLBUN) y real estate (MALLPLAZA, PARAUCO). "
-                f"El spread con el bono chileno se comprime, reduciendo el atractivo relativo del IPSA frente "
-                f"a renta fija en dólares."
-            )
-        elif bps < 0:
-            st.markdown(
-                f"La tasa del bono del Tesoro a 10 años cayó **{bps:+d} bps** hasta **{val:.2f}%** "
-                f"(última lectura FRED: {date_str}). "
-                f"Una baja en el US10Y **mejora el apetito por riesgo globalmente** y libera presión sobre "
-                f"los múltiplos del IPSA — los flujos de caja futuros se descuentan a tasas menores, "
-                f"elevando el valor presente de las acciones. Contexto favorable para posiciones en utilities "
-                f"y acciones con dividendos estables."
-            )
-        else:
-            st.markdown(
-                f"El bono del Tesoro a 10 años se mantiene estable en **{val:.2f}%** "
-                f"(última lectura FRED: {date_str}). "
-                f"Sin variación en la tasa de descuento global — señal neutra para el IPSA."
-            )
+        with st.container(border=True):
+            st.markdown("<div class='ov-card-title'>Análisis de Bonos del Tesoro (US10Y)</div>", unsafe_allow_html=True)
+            if bps > 0:
+                st.markdown(
+                    f"La tasa del bono del Tesoro a 10 años subió **{bps:+d} bps** hasta **{val:.2f}%** "
+                    f"(última lectura FRED: {date_str}). "
+                    f"Un alza en el US10Y eleva la tasa de descuento global, **presionando a la baja el valor "
+                    f"presente de los flujos de caja** de las acciones chilenas — especialmente utilities "
+                    f"reguladas (ENELAM, COLBUN) y real estate (MALLPLAZA, PARAUCO). "
+                    f"El spread con el bono chileno se comprime, reduciendo el atractivo relativo del IPSA frente "
+                    f"a renta fija en dólares."
+                )
+            elif bps < 0:
+                st.markdown(
+                    f"La tasa del bono del Tesoro a 10 años cayó **{bps:+d} bps** hasta **{val:.2f}%** "
+                    f"(última lectura FRED: {date_str}). "
+                    f"Una baja en el US10Y **mejora el apetito por riesgo globalmente** y libera presión sobre "
+                    f"los múltiplos del IPSA — los flujos de caja futuros se descuentan a tasas menores, "
+                    f"elevando el valor presente de las acciones. Contexto favorable para posiciones en utilities "
+                    f"y acciones con dividendos estables."
+                )
+            else:
+                st.markdown(
+                    f"El bono del Tesoro a 10 años se mantiene estable en **{val:.2f}%** "
+                    f"(última lectura FRED: {date_str}). "
+                    f"Sin variación en la tasa de descuento global — señal neutra para el IPSA."
+                )
 
-        # Strategy commentary
-        st.markdown("**Comentario de Estrategia**")
-        if bps > 5 or val > 4.5:
-            st.markdown(
-                f"> **Viento en contra.** El entorno de tasas globales presenta un desafío para el portafolio "
-                f"familiar: con el US10Y en {val:.2f}%, la renta fija estadounidense compite directamente con "
-                f"el retorno esperado del IPSA. Se recomienda priorizar posiciones con catalizadores "
-                f"idiosincráticos fuertes (commodities, exportadoras beneficiadas por CLP débil) y reducir "
-                f"exposición a sectores sensibles a tasas (utilities reguladas, retail endeudado)."
-            )
-        elif bps < -5 or val < 3.5:
-            st.markdown(
-                f"> **Viento a favor.** Con el US10Y bajando a {val:.2f}%, el contexto global favorece "
-                f"el riesgo en mercados emergentes. El IPSA se beneficia del rebalanceo hacia activos de mayor "
-                f"rendimiento. Momento oportuno para mantener o incrementar exposición en acciones con "
-                f"dividendos consistentes y alto beta al ciclo económico chileno."
-            )
-        else:
-            st.markdown(
-                f"> **Entorno neutral.** El US10Y en {val:.2f}% no genera presiones netas sobre el portafolio. "
-                f"Los retornos del IPSA dependerán principalmente de fundamentos locales: precio del cobre, "
-                f"tipo de cambio y expectativas de la actividad económica en Chile."
-            )
-        st.markdown("</div>", unsafe_allow_html=True)
-
+            st.markdown("**Comentario de Estrategia**")
+            if bps > 5 or val > 4.5:
+                st.markdown(
+                    f"> **Viento en contra.** El entorno de tasas globales presenta un desafío para el portafolio "
+                    f"familiar: con el US10Y en {val:.2f}%, la renta fija estadounidense compite directamente con "
+                    f"el retorno esperado del IPSA. Se recomienda priorizar posiciones con catalizadores "
+                    f"idiosincráticos fuertes (commodities, exportadoras beneficiadas por CLP débil) y reducir "
+                    f"exposición a sectores sensibles a tasas (utilities reguladas, retail endeudado)."
+                )
+            elif bps < -5 or val < 3.5:
+                st.markdown(
+                    f"> **Viento a favor.** Con el US10Y bajando a {val:.2f}%, el contexto global favorece "
+                    f"el riesgo en mercados emergentes. El IPSA se beneficia del rebalanceo hacia activos de mayor "
+                    f"rendimiento. Momento oportuno para mantener o incrementar exposición en acciones con "
+                    f"dividendos consistentes y alto beta al ciclo económico chileno."
+                )
+            else:
+                st.markdown(
+                    f"> **Entorno neutral.** El US10Y en {val:.2f}% no genera presiones netas sobre el portafolio. "
+                    f"Los retornos del IPSA dependerán principalmente de fundamentos locales: precio del cobre, "
+                    f"tipo de cambio y expectativas de la actividad económica en Chile."
+                )
     # ── Narrative ─────────────────────────────────────────────────────────────
-    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='ov-card-title'>Market Context & Chilean Bell</div>", unsafe_allow_html=True)
-    bullets = macro_narrative(macro)
-    if bullets:
-        for b in bullets:
-            st.markdown(f"- {b}")
-    else:
-        st.info("Macro data unavailable. Use 'Refresh Market Data' in the sidebar.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("<div class='ov-card-title'>Market Context & Chilean Bell</div>", unsafe_allow_html=True)
+        bullets = macro_narrative(macro)
+        if bullets:
+            for b in bullets:
+                st.markdown(f"- {b}")
+        else:
+            st.info("Macro data unavailable. Use 'Refresh Market Data' in the sidebar.")
 
     # ── Portfolio holdings watch ───────────────────────────────────────────────
-    st.markdown("<div class='ov-card'>", unsafe_allow_html=True)
-    st.markdown("<div class='ov-card-title'>Holdings Watch — Key Levels & Overnight Context</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("<div class='ov-card-title'>Holdings Watch — Key Levels & Overnight Context</div>", unsafe_allow_html=True)
 
-    if not holdings:
-        st.info("No holdings to brief on. Add positions in 'Manage Holdings'.")
-    else:
-        # Group multiple purchases of the same ticker into one row
-        grouped: dict = {}
-        for h in holdings:
-            t = h["ticker"]
-            if t not in grouped:
-                grouped[t] = {
-                    "ticker":       t,
-                    "company_name": h["company_name"],
-                    "quantity":     h["quantity"],
-                    "cost_basis":   h["quantity"] * h["buy_price"],
-                    "earliest_date": h["buy_date"],
-                }
-            else:
-                grouped[t]["quantity"]   += h["quantity"]
-                grouped[t]["cost_basis"] += h["quantity"] * h["buy_price"]
-                if h["buy_date"] < grouped[t]["earliest_date"]:
-                    grouped[t]["earliest_date"] = h["buy_date"]
+        if not holdings:
+            st.info("No holdings to brief on. Add positions in 'Manage Holdings'.")
+        else:
+            grouped: dict = {}
+            for h in holdings:
+                t = h["ticker"]
+                if t not in grouped:
+                    grouped[t] = {
+                        "ticker":        t,
+                        "company_name":  h["company_name"],
+                        "quantity":      h["quantity"],
+                        "cost_basis":    h["quantity"] * h["buy_price"],
+                        "earliest_date": h["buy_date"],
+                    }
+                else:
+                    grouped[t]["quantity"]   += h["quantity"]
+                    grouped[t]["cost_basis"] += h["quantity"] * h["buy_price"]
+                    if h["buy_date"] < grouped[t]["earliest_date"]:
+                        grouped[t]["earliest_date"] = h["buy_date"]
 
-        for ticker, g in grouped.items():
-            short_tkr  = ticker.replace(".SN", "")
-            pd_data    = prices.get(ticker, {})
-            price      = pd_data.get("price")
-            ts         = pd_data.get("timestamp")
+            for ticker, g in grouped.items():
+                short_tkr = ticker.replace(".SN", "")
+                pd_data   = prices.get(ticker, {})
+                price     = pd_data.get("price")
+                ts        = pd_data.get("timestamp")
 
-            if not price:
-                st.warning(
-                    f"**{short_tkr}** — price unavailable "
-                    f"(last verified: {ts_str(ts)}). Error: {pd_data.get('error', 'Unknown')}"
-                )
-                continue
-
-            qty        = g["quantity"]
-            cost_basis = g["cost_basis"]
-            avg_cost   = cost_basis / qty if qty else 0
-            mkt_value  = qty * price
-            gain_clp   = mkt_value - cost_basis
-            gain_pct   = (gain_clp / cost_basis * 100) if cost_basis else 0
-
-            hist     = df_.get_historical_data(ticker, "1y")
-            sma_data = calc_sma_signals(hist)
-            sr_data  = calc_support_resistance(hist)
-            chg_pct  = pd_data.get("change_pct", 0) or 0
-
-            with st.expander(
-                f"{short_tkr} — {g['company_name']} | "
-                f"Price: {price:,.1f} CLP ({chg_pct:+.2f}%) | "
-                f"P&L: {fmt_pct(gain_pct)}",
-                expanded=False,
-            ):
-                b1, b2 = st.columns(2)
-
-                with b1:
-                    st.markdown(f"**Current Price:** {price:,.2f} CLP")
-                    st.caption(f"Last verified: {ts_str(ts)}")
-                    st.markdown(f"**Day Change:** {chg_pct:+.2f}%")
-                    st.markdown(f"**Avg Cost:** {avg_cost:,.2f} CLP | **Qty:** {qty:,.0f}")
-                    st.markdown(
-                        f"**Holding P&L:** {fmt_clp(gain_clp)} ({fmt_pct(gain_pct)})"
+                if not price:
+                    st.warning(
+                        f"**{short_tkr}** — price unavailable "
+                        f"(last verified: {ts_str(ts)}). Error: {pd_data.get('error', 'Unknown')}"
                     )
+                    continue
 
-                    # IPSA alpha since earliest buy
-                    ipsa_ret = df_.get_ipsa_return_since(g["earliest_date"])
-                    alpha    = calc_alpha(gain_pct, ipsa_ret)
-                    if alpha is not None:
-                        st.markdown(
-                            f"**Alpha vs IPSA (since {g['earliest_date']}):** {fmt_pct(alpha)}"
+                qty        = g["quantity"]
+                cost_basis = g["cost_basis"]
+                avg_cost   = cost_basis / qty if qty else 0
+                mkt_value  = qty * price
+                gain_clp   = mkt_value - cost_basis
+                gain_pct   = (gain_clp / cost_basis * 100) if cost_basis else 0
+
+                hist     = df_.get_historical_data(ticker, "1y")
+                sma_data = calc_sma_signals(hist)
+                sr_data  = calc_support_resistance(hist)
+                chg_pct  = pd_data.get("change_pct", 0) or 0
+
+                with st.expander(
+                    f"{short_tkr} — {g['company_name']} | "
+                    f"Price: {price:,.1f} CLP ({chg_pct:+.2f}%) | "
+                    f"P&L: {fmt_pct(gain_pct)}",
+                    expanded=False,
+                ):
+                    b1, b2 = st.columns(2)
+                    with b1:
+                        st.markdown(f"**Current Price:** {price:,.2f} CLP")
+                        st.caption(f"Last verified: {ts_str(ts)}")
+                        st.markdown(f"**Day Change:** {chg_pct:+.2f}%")
+                        st.markdown(f"**Avg Cost:** {avg_cost:,.2f} CLP | **Qty:** {qty:,.0f}")
+                        st.markdown(f"**Holding P&L:** {fmt_clp(gain_clp)} ({fmt_pct(gain_pct)})")
+                        ipsa_ret = df_.get_ipsa_return_since(g["earliest_date"])
+                        alpha    = calc_alpha(gain_pct, ipsa_ret)
+                        if alpha is not None:
+                            st.markdown(f"**Alpha vs IPSA (since {g['earliest_date']}):** {fmt_pct(alpha)}")
+                    with b2:
+                        if sma_data.get("signal"):
+                            lbl = SIGNAL_LABELS.get(sma_data["signal"], sma_data["signal"])
+                            st.markdown(f"**Trend Signal:** {lbl}")
+                        if sr_data.get("support"):
+                            st.markdown(f"**Support:** {sr_data['support']:,.1f} CLP")
+                        if sr_data.get("resistance"):
+                            st.markdown(f"**Resistance:** {sr_data['resistance']:,.1f} CLP")
+                        cmf_url = (
+                            f"https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php"
+                            f"?s=emiso&q={short_tkr}"
                         )
-
-                with b2:
-                    if sma_data.get("signal"):
-                        label = SIGNAL_LABELS.get(sma_data["signal"], sma_data["signal"])
-                        st.markdown(f"**Trend Signal:** {label}")
-
-                    if sr_data.get("support"):
-                        st.markdown(f"**Support:** {sr_data['support']:,.1f} CLP")
-                    if sr_data.get("resistance"):
-                        st.markdown(f"**Resistance:** {sr_data['resistance']:,.1f} CLP")
-
-                    cmf_url = (
-                        f"https://www.cmfchile.cl/sitio/aplic/serdoc/ver_sgd.php"
-                        f"?s=emiso&q={short_tkr}"
-                    )
-                    st.markdown(f"[CMF Filings]({cmf_url})")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+                        st.markdown(f"[CMF Filings]({cmf_url})")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
